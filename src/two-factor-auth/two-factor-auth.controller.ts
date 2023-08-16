@@ -56,7 +56,7 @@ export class TwoFactorAuthController {
     @Body() twoFactorAuthCode: Activate2FARequestDTO,
   ) {
     const isCodeValid =
-      this.twoFactorAuthService.isTwoFactorAuthenticationCodeValid(
+      await this.twoFactorAuthService.isTwoFactorAuthenticationCodeValid(
         twoFactorAuthCode.otp,
         user,
       );
@@ -75,7 +75,7 @@ export class TwoFactorAuthController {
     @Body() twoFactorAuthCode: Activate2FARequestDTO,
   ) {
     const isCodeValid =
-      this.twoFactorAuthService.isTwoFactorAuthenticationCodeValid(
+      await this.twoFactorAuthService.isTwoFactorAuthenticationCodeValid(
         twoFactorAuthCode.otp,
         user,
       );

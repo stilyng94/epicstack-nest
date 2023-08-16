@@ -34,13 +34,14 @@ export class TwoFactorAuthService {
     return toFileStream(stream, otpAuthUrl);
   }
 
-  public isTwoFactorAuthenticationCodeValid(
+  public async isTwoFactorAuthenticationCodeValid(
     twoFactorAuthenticationCode: string,
     user: ApiUserDto,
   ) {
+    const { twoFactorAuthSecret } = await this.userService.getUserById(user.id);
     return authenticator.verify({
       token: twoFactorAuthenticationCode,
-      secret: user.twoFactorAuthSecret ?? '',
+      secret: twoFactorAuthSecret ?? '',
     });
   }
 }
