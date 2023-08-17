@@ -3,6 +3,7 @@ import {
   Controller,
   Post,
   Res,
+  StreamableFile,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -12,14 +13,14 @@ import {
   ApiOkResponse,
 } from '@nestjs/swagger';
 import { TwoFactorAuthService } from './two-factor-auth.service';
-import { CurrentUser } from '../user/currentuser.decorator';
-import { JwtAuthGuard } from '../auth/jwt.auth.guard';
 import { Response } from 'express';
-import { UserService } from '../user/user.service';
 import { ZodSerializerDto } from 'nestjs-zod';
-import { ApiUserDto } from '../user/user.dto';
-import { AuthService } from '../auth/auth.service';
 import { Activate2FARequestDTO } from './two-factor-auth.dto';
+import { AuthService } from '@/auth/auth.service';
+import { JwtAuthGuard } from '@/auth/jwt.auth.guard';
+import { CurrentUser } from '@/user/currentuser.decorator';
+import { UserService } from '@/user/user.service';
+import { UserDto } from '@generated/zod';
 
 @Controller('2fa')
 export class TwoFactorAuthController {
@@ -33,10 +34,7 @@ export class TwoFactorAuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiCreatedResponse()
-  async register2fa(
-    @CurrentUser() user: ApiUserDto,
-    @Res() response: Response,
-  ) {
+  async register2fa(@CurrentUser() user: UserDto, @Res() response: Response) {
     const { otpAuthUrl } =
       await this.twoFactorAuthService.generateTwoFactorAuthenticationSecret(
         user,
@@ -47,12 +45,12 @@ export class TwoFactorAuthController {
   }
 
   @Post('activate')
-  @ZodSerializerDto(ApiUserDto)
-  @ApiOkResponse({ type: ApiUserDto })
+  @ZodSerializerDto(UserDto)
+  @ApiOkResponse({ type: UserDto })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async activateTwoFactorAuth(
-    @CurrentUser() user: ApiUserDto,
+    @CurrentUser() user: UserDto,
     @Body() twoFactorAuthCode: Activate2FARequestDTO,
   ) {
     const isCodeValid =
@@ -71,7 +69,7 @@ export class TwoFactorAuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async authenticate(
-    @CurrentUser() user: ApiUserDto,
+    @CurrentUser() user: UserDto,
     @Body() twoFactorAuthCode: Activate2FARequestDTO,
   ) {
     const isCodeValid =
@@ -83,7 +81,7 @@ export class TwoFactorAuthController {
       throw new UnauthorizedException('Wrong authentication code');
     }
 
-    const accessToken = await this.authService.login(user, true);
+    const accessToken = this.authService.login(user, true);
     const refreshToken = await this.authService.setRefreshToken(user);
 
     return { accessToken, refreshToken };

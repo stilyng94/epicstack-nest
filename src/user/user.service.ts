@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { CreateUserDto } from './user.dto';
+import { CreateWithOauthDto } from '@/oauth/oauth.dto';
 
 @Injectable()
 export class UserService {
@@ -39,5 +44,21 @@ export class UserService {
       where: { id: userId },
       data: { isTwoFactorAuthEnabled: true },
     });
+  }
+
+  async createWithOauth(dto: CreateWithOauthDto) {
+    const user = await this.prisma.account.create({
+      data: {
+        provider: dto.provider,
+        subject: dto.subject,
+        user: { create: { email: dto.email, username: dto.username } },
+      },
+      select: { user: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException();
+    }
+    return user.user;
   }
 }

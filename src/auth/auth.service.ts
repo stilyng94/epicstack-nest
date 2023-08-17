@@ -1,16 +1,13 @@
-import {
-  ForbiddenException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { PrismaService } from 'nestjs-prisma';
 import { JwtService } from '@nestjs/jwt';
-import { hashPassword, verifyPassword } from './auth.helpers';
-import { ApiUserDto, CreateUserDto } from '../user/user.dto';
-import { UserService } from '../user/user.service';
-import { TokenPayloadDto } from './auth.dto';
-import { EnvConfigDto } from '../config/env.config';
+import { hashPassword } from './auth.helpers';
+import { LoginResponseDto, TokenPayloadDto } from './auth.dto';
+import { EnvConfigDto } from '@/config/env.config';
+import { CreateUserDto } from '@/user/user.dto';
+import { UserService } from '@/user/user.service';
+import { UserDto } from '@generated/zod';
 
 @Injectable()
 export class AuthService {
@@ -22,44 +19,42 @@ export class AuthService {
   ) {}
 
   async register(userData: CreateUserDto) {
-    const password = await hashPassword(userData.password);
     const createdUser = await this.userService.create({
       ...userData,
-      password,
     });
     return createdUser;
   }
 
-  async validateUser(username: string, password: string): Promise<User> {
+  async validateUser(email: string): Promise<LoginResponseDto> {
     const user = await this.prisma.user.findFirst({
-      where: { OR: [{ email: username }, { username }] },
+      where: { email },
     });
-    const isPasswordValid = await verifyPassword(
-      password,
-      user?.password ?? '',
-    );
-    if (!user || !isPasswordValid) {
-      throw new UnauthorizedException('Wrong credentials provided');
-    }
-    return user;
+
+    //Send magic link mail
+    return {
+      message: 'If your account exists an email will be sent to it',
+    };
   }
 
-  async login(user: ApiUserDto, is2faAuth = false) {
+  async login(user: UserDto, is2faAuth = false) {
     const payload: TokenPayloadDto = { id: user.id, is2faAuth };
+    const accessToken = this.setAccessToken(payload);
+    const refreshToken = await this.setRefreshToken(payload);
+    return { accessToken, refreshToken };
+  }
 
+  setAccessToken(payload: TokenPayloadDto) {
     return this.jwtService.sign(payload, {
       secret: this.envConfigDto.JWT_SECRET,
     });
   }
 
-  async setRefreshToken(user: ApiUserDto, is2faAuth = false) {
-    const payload: TokenPayloadDto = { id: user.id, is2faAuth };
-
+  async setRefreshToken(payload: TokenPayloadDto) {
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.envConfigDto.REFRESH_TOKEN_SECRET,
     });
     await this.prisma.refreshToken.create({
-      data: { userId: user.id, token: refreshToken },
+      data: { userId: payload.id, token: refreshToken },
     });
     return hashPassword(refreshToken);
   }
@@ -72,10 +67,10 @@ export class AuthService {
     if (!tokenUser) {
       throw new ForbiddenException('Expired token');
     }
-    return tokenUser as unknown as ApiUserDto;
+    return tokenUser;
   }
 
-  async logout(user: ApiUserDto) {
+  async logout(user: User) {
     await this.prisma.refreshToken.deleteMany({ where: { userId: user.id } });
   }
 }

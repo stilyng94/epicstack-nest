@@ -1,13 +1,18 @@
-import * as z from "nestjs-zod/z"
-import { createZodDto } from "nestjs-zod/dto"
-import { CompleteRole, RelatedRoleSchema, CompleteRefreshToken, RelatedRefreshTokenSchema } from "./index"
+import * as z from 'nestjs-zod/z';
+import { createZodDto } from 'nestjs-zod/dto';
+import {
+  CompleteRole,
+  RelatedRoleSchema,
+  CompleteRefreshToken,
+  RelatedRefreshTokenSchema,
+  CompleteAccount,
+  RelatedAccountSchema,
+} from './index';
 
 export const UserSchema = z.object({
   id: z.string().cuid2(),
-  email: z.string(),
-  password: z.password(),
-  username: z.string(),
-  name: z.string().nullish(),
+  email: z.string().toLowerCase().email(),
+  username: z.string().nullish(),
   createdAt: z.date(),
   updatedAt: z.date(),
   /**
@@ -15,14 +20,14 @@ export const UserSchema = z.object({
    */
   twoFactorAuthSecret: z.string().nullish(),
   isTwoFactorAuthEnabled: z.boolean(),
-})
+});
 
-export class UserDto extends createZodDto(UserSchema) {
-}
+export class UserDto extends createZodDto(UserSchema) {}
 
 export interface CompleteUser extends z.infer<typeof UserSchema> {
-  roles: CompleteRole[]
-  RefreshToken: CompleteRefreshToken[]
+  roles: CompleteRole[];
+  RefreshToken: CompleteRefreshToken[];
+  Account: CompleteAccount[];
 }
 
 /**
@@ -30,7 +35,10 @@ export interface CompleteUser extends z.infer<typeof UserSchema> {
  *
  * NOTE: Lazy required in case of potential circular dependencies within schema
  */
-export const RelatedUserSchema: z.ZodSchema<CompleteUser> = z.lazy(() => UserSchema.extend({
-  roles: RelatedRoleSchema.array(),
-  RefreshToken: RelatedRefreshTokenSchema.array(),
-}))
+export const RelatedUserSchema: z.ZodSchema<CompleteUser> = z.lazy(() =>
+  UserSchema.extend({
+    roles: RelatedRoleSchema.array(),
+    RefreshToken: RelatedRefreshTokenSchema.array(),
+    Account: RelatedAccountSchema.array(),
+  }),
+);

@@ -1,4 +1,4 @@
-import cryptoUtils from '../utils/crypto-utils';
+import cryptoUtils from '@/utils/crypto-utils';
 import { timingSafeEqual } from 'node:crypto';
 
 export const hashPassword = async (password: string) => {

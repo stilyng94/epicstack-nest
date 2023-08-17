@@ -1,10 +1,11 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt.auth.guard';
+import { JwtAuthGuard } from '@/auth/jwt.auth.guard';
 import { CurrentUser } from './currentuser.decorator';
 import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { ApiUserDto } from './user.dto';
 import { ZodSerializerDto } from 'nestjs-zod';
-import { TwoFactorAuthGuard } from '../auth/two-factor-auth.guard';
+import { TwoFactorAuthGuard } from '@/two-factor-auth/two-factor-auth.guard';
+import { UserDto } from '@generated/zod';
 
 @Controller('user')
 export class UserController {
@@ -13,7 +14,7 @@ export class UserController {
   @ZodSerializerDto(ApiUserDto)
   @ApiOkResponse({ type: ApiUserDto })
   @Get('profile')
-  getProfile(@CurrentUser() user: ApiUserDto) {
+  getProfile(@CurrentUser() user: UserDto) {
     return user;
   }
 
@@ -22,7 +23,7 @@ export class UserController {
   @ZodSerializerDto(ApiUserDto)
   @ApiOkResponse({ type: ApiUserDto })
   @Get('profiler')
-  getProfiler(@CurrentUser() user: ApiUserDto) {
+  getProfiler(@CurrentUser() user: UserDto) {
     return user;
   }
 }

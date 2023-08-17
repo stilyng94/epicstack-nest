@@ -7,6 +7,8 @@ export const EnvConfigSchema = z.object({
   JWT_SECRET: z.string(),
   ENV: z.union([z.literal('development'), z.literal('production')]),
   SENTRY_DSN: z.string(),
+  GOOGLE_AUTH_CLIENT_ID: z.string(),
+  GOOGLE_AUTH_CLIENT_SECRET: z.string(),
 });
 
 export const EnvConfigApi = zodToOpenAPI(EnvConfigSchema);

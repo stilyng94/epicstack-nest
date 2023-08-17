@@ -11,12 +11,19 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
+    "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
+    "isolatedModules": true,
     "strictNullChecks": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@/*": ["src/*"],
+      "@generated": ["prisma/generated"],
+      "@generated/*": ["prisma/generated/*"]
+    }
   }
 }

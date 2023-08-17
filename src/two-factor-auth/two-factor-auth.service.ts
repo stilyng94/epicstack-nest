@@ -1,19 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { UserService } from '../user/user.service';
-import { EnvConfigDto } from '../config/env.config';
+import { UserService } from '@/user/user.service';
 import { toFileStream } from 'qrcode';
 import { Response } from 'express';
 import { authenticator } from 'otplib';
-import { ApiUserDto } from '../user/user.dto';
+import { UserDto } from '@generated/zod';
 
 @Injectable()
 export class TwoFactorAuthService {
-  constructor(
-    private readonly userService: UserService,
-    private readonly envConfigDto: EnvConfigDto,
-  ) {}
+  constructor(private readonly userService: UserService) {}
 
-  public async generateTwoFactorAuthenticationSecret(user: ApiUserDto) {
+  public async generateTwoFactorAuthenticationSecret(user: UserDto) {
     const secret = authenticator.generateSecret();
 
     const otpAuthUrl = authenticator.keyuri(
@@ -23,7 +19,6 @@ export class TwoFactorAuthService {
     );
 
     await this.userService.setTwoFactorAuthenticationSecret(secret, user.id);
-
     return {
       secret,
       otpAuthUrl,
@@ -36,7 +31,7 @@ export class TwoFactorAuthService {
 
   public async isTwoFactorAuthenticationCodeValid(
     twoFactorAuthenticationCode: string,
-    user: ApiUserDto,
+    user: UserDto,
   ) {
     const { twoFactorAuthSecret } = await this.userService.getUserById(user.id);
     return authenticator.verify({

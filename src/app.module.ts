@@ -17,6 +17,7 @@ import { TwoFactorAuthService } from './two-factor-auth/two-factor-auth.service'
 import { TwoFactorAuthController } from './two-factor-auth/two-factor-auth.controller';
 import { TwoFactorAuthModule } from './two-factor-auth/two-factor-auth.module';
 import { LoggerErrorInterceptor, LoggerModule } from 'nestjs-pino';
+import { OauthModule } from './oauth/oauth.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { LoggerErrorInterceptor, LoggerModule } from 'nestjs-pino';
     AuthModule,
     UserModule,
     TwoFactorAuthModule,
+    OauthModule,
   ],
   controllers: [AppController, TwoFactorAuthController],
   providers: [
