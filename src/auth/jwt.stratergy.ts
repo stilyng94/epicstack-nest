@@ -22,11 +22,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(req: Request, payload: TokenPayloadDto) {
-    req['is2faAuth'] = payload.is2faAuth;
     const user = await this.userService.getUserById(payload.id);
     if (!user) {
       throw new UnauthorizedException();
     }
+    req['is2faAuth'] = payload.is2faAuth;
     return user;
   }
 }

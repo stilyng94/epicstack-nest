@@ -18,7 +18,11 @@ import { TwoFactorAuthController } from './two-factor-auth/two-factor-auth.contr
 import { TwoFactorAuthModule } from './two-factor-auth/two-factor-auth.module';
 import { LoggerErrorInterceptor, LoggerModule } from 'nestjs-pino';
 import { OauthModule } from './oauth/oauth.module';
-
+import { MailerModule } from '@nestjs-modules/mailer';
+import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
+import { ScheduleModule } from '@nestjs/schedule';
+import { AccessControlModule } from 'nest-access-control';
+import { RBAC_POLICY } from './auth/rbac-policy';
 @Module({
   imports: [
     TypedConfigModule.forRoot({
@@ -28,6 +32,7 @@ import { OauthModule } from './oauth/oauth.module';
       validate: (config) => EnvConfigSchema.parse(config),
     }),
     LoggerModule.forRootAsync({
+      imports: [TypedConfigModule],
       inject: [EnvConfigDto],
       useFactory: (envConfigDto: EnvConfigDto) => ({
         pinoHttp: {
@@ -59,10 +64,44 @@ import { OauthModule } from './oauth/oauth.module';
         signOptions: { expiresIn: '3600s' },
       }),
     }),
+    MailerModule.forRootAsync({
+      imports: [TypedConfigModule],
+      inject: [EnvConfigDto],
+      useFactory: (config: EnvConfigDto) => ({
+        transport: {
+          pool: true,
+          debug: config.ENV === 'development',
+          host: config.MAIL_HOST,
+          port: config.MAIL_PORT,
+          secure: config.MAIL_SECURE,
+          auth: {
+            user: config.MAIL_AUTH_USER,
+            pass: config.MAIL_AUTH_PASSWORD,
+          },
+        },
+        defaults: {
+          sender: {
+            name: config.DEFAULT_FROM_NAME,
+            address: config.DEFAULT_FROM_ADDRESS,
+          },
+        },
+        preview: config.ENV === 'development',
+        template: {
+          dir: process.cwd() + '/templates/mail-templates/',
+          adapter: new EjsAdapter(),
+          options: {
+            strict: true,
+          },
+        },
+      }),
+    }),
+    AccessControlModule.forRoles(RBAC_POLICY, {}),
     AuthModule,
     UserModule,
     TwoFactorAuthModule,
     OauthModule,
+
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController, TwoFactorAuthController],
   providers: [

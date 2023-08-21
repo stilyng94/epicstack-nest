@@ -32,13 +32,6 @@ export class UserService {
     return user;
   }
 
-  setTwoFactorAuthenticationSecret(secret: string, userId: string) {
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { twoFactorAuthSecret: secret },
-    });
-  }
-
   async turnOnTwoFactorAuth(userId: string) {
     return this.prisma.user.update({
       where: { id: userId },

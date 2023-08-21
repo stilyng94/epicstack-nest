@@ -9,9 +9,9 @@ export class TwoFactorAuthGuard implements CanActivate {
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
-    return (
-      (req.user as unknown as UserDto).isTwoFactorAuthEnabled &&
-      req['is2faAuth']
-    );
+    if (!(req.user as unknown as UserDto).isTwoFactorAuthEnabled) {
+      return true;
+    }
+    return Boolean(req['is2faAuth']);
   }
 }
