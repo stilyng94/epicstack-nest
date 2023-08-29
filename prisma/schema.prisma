@@ -14,7 +14,7 @@ generator zod {
   provider = "nestjs-zod-prisma"
   output   = "./generated/zod" // (default) the directory where generated zod schemas will be saved
 
-  relationModel = true // (default) Create and export both plain and related models.
+  relationModel = false // (default) Create and export both plain and related models.
   // relationModel         = "default" // Do not export model without relations.
   // relationModel         = false // Do not generate related model
 
@@ -39,48 +39,40 @@ generator zod {
 }
 
 model Role {
-  id          String       @id @unique @default(cuid()) ///@z.string().cuid2()
-  name        String       @unique
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  users       User[]
-  permissions Permission[]
-}
-
-model Permission {
   id        String   @id @unique @default(cuid()) ///@z.string().cuid2()
   name      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  roles     Role[]
+  users     User[]
 }
 
 model User {
   id                     String         @id @default(cuid()) ///@z.string().cuid2()
-  email                  String         @unique
-  password               String ///@z.password()
-  username               String         @unique
-  name                   String?
-  roles                  Role[]
+  email                  String         @unique ///@z.string().toLowerCase().email()
+  username               String?
+  role                   Role           @relation(fields: [roleId], references: [id])
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
   RefreshToken           RefreshToken[]
-  twoFactorAuthSecret    String? /// Two factor authentication secret
   isTwoFactorAuthEnabled Boolean        @default(false)
+  Account                Account[]
+  isVerified             Boolean        @default(false)
+  roleId                 String
+  Docs                   Docs[]
 }
 
-model Verification {
-  id        String   @id @default(cuid()) ///@z.string().cuid2()
+model VerificationToken {
+  id String @id @default(cuid()) ///@z.string().cuid2()
+
+  /// The type of verification, e.g. "email" or "phone number"
+  target String
+
+  type      String ///@z.union([z.literal('2fa'), z.literal('2fa-verify'),z.literal('forgot-password'),z.literal('onboarding'),z.literal('login'),z.literal('change-email')])
+  expiresAt DateTime? /// When it's safe to delete this verification
+
   createdAt DateTime @default(now())
-
-  /// The type of verification, e.g. "email" or "phone"
-  type String ///@z.union([z.literal('email'), z.literal('phone')])
-
-  /// The thing we're trying to verify, e.g. a user's email or phone number
-  target String ///@z.union([z.literal('email'), z.literal('phone')])
-
   /// The secret key used to generate the otp
-  secret String
+  secret    String
 
   /// The algorithm used to generate the otp
   algorithm String
@@ -91,9 +83,6 @@ model Verification {
   /// The number of seconds the otp is valid for
   period Int
 
-  /// When it's safe to delete this verification
-  expiresAt DateTime?
-
   @@unique([target, type])
 }
 
@@ -102,4 +91,28 @@ model RefreshToken {
   token  String
   user   User   @relation(fields: [userId], references: [id])
   userId String ///@z.string().cuid2()
+}
+
+model Account {
+  id        String   @id @default(cuid()) ///@z.string().cuid2()
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  provider  String ///@z.union([z.literal('google'), z.literal('twitter')])
+  subject   String
+  userId    String ///@z.string().cuid2()
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([provider, subject])
+  @@index([userId])
+}
+
+model Docs {
+  id        String   @id @default(cuid()) ///@z.string().cuid2()
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  path      String
+  filename  String
+  mimetype  String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
 }

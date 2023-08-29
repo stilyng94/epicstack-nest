@@ -15,54 +15,69 @@ async function bootstrap() {
   });
   app.useLogger(app.get(Logger));
 
-  const env = app.get(EnvConfigDto);
+  const envConfigDto = app.get(EnvConfigDto);
   const logger = new NestLogger('Bootstrap');
 
-  app.set('trust proxy', '1');
+  // const typesenseService = app.get(TypesenseService);
+
+  // await typesenseService.client.collections().create({
+  //   name: 'docs',
+  //   fields: [
+  //     { name: 'filename', type: 'string', facet: true, index: true },
+  //     { name: 'id', type: 'string', facet: false, index: true },
+  //     { name: 'path', type: 'auto', facet: false, index: false },
+  //     { name: 'mimetype', type: 'auto', facet: false, index: false },
+  //   ],
+  // });
+
+  if (envConfigDto.ENV === 'production') {
+    app.set('trust proxy', '1');
+    app.disable('x-powered-by');
+    // ensure HTTPS only (X-Forwarded-Proto comes from Host)
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      const proto = req.get('X-Forwarded-Proto');
+      const host = req.get('X-Forwarded-Host') ?? req.get('host') ?? '';
+      if (proto === 'http') {
+        res.set('X-Forwarded-Proto', 'https');
+        res.redirect(`https://${host}${req.originalUrl}`);
+        return;
+      }
+      next();
+    });
+
+    app.use(
+      helmet({
+        referrerPolicy: { policy: 'same-origin' },
+        crossOriginEmbedderPolicy: false,
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: [`'self'`],
+            styleSrc: [`'self'`, `'unsafe-inline'`],
+            imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
+            scriptSrc: [`'self'`, `https: 'unsafe-inline'`],
+          },
+        },
+      }),
+    );
+  }
+
   app.enableCors({ optionsSuccessStatus: HttpStatus.OK });
 
-  // ensure HTTPS only (X-Forwarded-Proto comes from Host)
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    const proto = req.get('X-Forwarded-Proto');
-    const host = req.get('X-Forwarded-Host') ?? req.get('host') ?? '';
-    if (proto === 'http') {
-      res.set('X-Forwarded-Proto', 'https');
-      res.redirect(`https://${host}${req.originalUrl}`);
-      return;
-    }
-    next();
-  });
+  if (envConfigDto.ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('EpicStack-Nest')
+      .setDescription('EpicStack-Nest API description')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    patchNestJsSwagger();
+    const document = SwaggerModule.createDocument(app, config, {
+      operationIdFactory: (_: string, methodKey: string) => methodKey,
+    });
+    SwaggerModule.setup('api', app, document);
+  }
 
-  app.disable('x-powered-by');
-
-  const config = new DocumentBuilder()
-    .setTitle('EpicStack-Nest')
-    .setDescription('EpicStack-Nest API description')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  patchNestJsSwagger();
-  const document = SwaggerModule.createDocument(app, config, {
-    operationIdFactory: (_: string, methodKey: string) => methodKey,
-  });
-  SwaggerModule.setup('api', app, document);
-
-  app.use(
-    helmet({
-      referrerPolicy: { policy: 'same-origin' },
-      crossOriginEmbedderPolicy: false,
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: [`'self'`],
-          styleSrc: [`'self'`, `'unsafe-inline'`],
-          imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
-          scriptSrc: [`'self'`, `https: 'unsafe-inline'`],
-        },
-      },
-    }),
-  );
-
-  await app.listen(env.PORT);
+  await app.listen(envConfigDto.PORT);
 
   logger.log(`app running on url =>> ${await app.getUrl()}`);
 }

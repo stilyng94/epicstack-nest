@@ -1,36 +1,56 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
-import { LocalAuthGuard } from './local.auth.guard';
-import { Request } from 'express';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { User } from '@prisma/client';
-import { ApiUserDto, CreateUserDto } from '../user/user.dto';
 import { ApiBody, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
-import { LoginDto, LoginResponseDto } from './auth.dto';
-import { ZodSerializerDto } from 'nestjs-zod';
+import {
+  LoginCallbackResponseDto,
+  LoginDto,
+  LoginResponseDto,
+} from './auth.dto';
+import { CreateUserDto } from '@/user/user.dto';
+import { OtpRequestDTO } from '@/two-factor-auth/two-factor-auth.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @ApiCreatedResponse()
+  @ApiCreatedResponse({ type: LoginResponseDto })
   async register(@Body() userData: CreateUserDto) {
     await this.authService.register(userData);
+    return {
+      message: 'An email has been sent to your account',
+    } satisfies LoginResponseDto;
   }
 
-  @UseGuards(LocalAuthGuard)
-  @ZodSerializerDto(LoginResponseDto)
+  @ApiOkResponse({ type: LoginResponseDto })
+  @ApiBody({ type: OtpRequestDTO })
+  @HttpCode(HttpStatus.OK)
+  @Post('register/callback')
+  async verify(@Body() dto: OtpRequestDTO) {
+    await this.authService.completeOnRegistration(dto);
+    return {
+      message: 'Account verification successful',
+    } satisfies LoginResponseDto;
+  }
+
   @ApiOkResponse({ type: LoginResponseDto })
   @ApiBody({ type: LoginDto })
+  @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(@Req() req: Request) {
-    const accessToken = await this.authService.login(
-      req.user as unknown as ApiUserDto,
-    );
-    const refreshToken = await this.authService.setRefreshToken(
-      req.user as unknown as User,
-    );
+  async login(@Body() dto: LoginDto) {
+    await this.authService.loginUser(dto.email);
+    return {
+      message: 'Check your email to finish logging in',
+    } satisfies LoginResponseDto;
+  }
 
-    return { accessToken, refreshToken };
+  @ApiOkResponse({ type: LoginCallbackResponseDto })
+  @ApiBody({ type: OtpRequestDTO })
+  @HttpCode(HttpStatus.OK)
+  @Post('login/callback')
+  async loginCallback(@Body() dto: OtpRequestDTO) {
+    return this.authService.completeLogin(
+      dto,
+    ) satisfies Promise<LoginCallbackResponseDto>;
   }
 }
