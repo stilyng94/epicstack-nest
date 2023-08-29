@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiBody, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import {
@@ -6,7 +6,6 @@ import {
   LoginDto,
   LoginResponseDto,
 } from './auth.dto';
-import { ZodSerializerDto } from 'nestjs-zod';
 import { CreateUserDto } from '@/user/user.dto';
 import { OtpRequestDTO } from '@/two-factor-auth/two-factor-auth.dto';
 
@@ -25,9 +24,10 @@ export class AuthController {
 
   @ApiOkResponse({ type: LoginResponseDto })
   @ApiBody({ type: OtpRequestDTO })
+  @HttpCode(HttpStatus.OK)
   @Post('register/callback')
   async verify(@Body() dto: OtpRequestDTO) {
-    await this.authService.completeOnBoarding(dto);
+    await this.authService.completeOnRegistration(dto);
     return {
       message: 'Account verification successful',
     } satisfies LoginResponseDto;
@@ -35,6 +35,7 @@ export class AuthController {
 
   @ApiOkResponse({ type: LoginResponseDto })
   @ApiBody({ type: LoginDto })
+  @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(@Body() dto: LoginDto) {
     await this.authService.loginUser(dto.email);
@@ -45,6 +46,7 @@ export class AuthController {
 
   @ApiOkResponse({ type: LoginCallbackResponseDto })
   @ApiBody({ type: OtpRequestDTO })
+  @HttpCode(HttpStatus.OK)
   @Post('login/callback')
   async loginCallback(@Body() dto: OtpRequestDTO) {
     return this.authService.completeLogin(

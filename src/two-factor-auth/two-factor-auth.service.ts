@@ -1,15 +1,15 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as QRCode from 'qrcode';
-import { UserDto } from '@generated/zod';
 import { generateTOTP, verifyTOTP, getTOTPAuthUri } from '@epic-web/totp';
 import { PrismaService } from 'nestjs-prisma';
 import { VerificationTypes } from '@/auth/auth.dto';
+import { UserWithRoleDto } from '@/user/user.dto';
 
 @Injectable()
 export class TwoFactorAuthService {
   constructor(private readonly prisma: PrismaService) {}
 
-  public async generateTwoFactorAuthenticationSecret(user: UserDto) {
+  public async generateTwoFactorAuthenticationSecret(user: UserWithRoleDto) {
     const { secret, period, digits, algorithm } = generateTOTP();
     const otpUri = getTOTPAuthUri({
       secret,
@@ -41,7 +41,7 @@ export class TwoFactorAuthService {
     code,
     type,
   }: {
-    user: UserDto;
+    user: UserWithRoleDto;
     code: string;
     type: VerificationTypes;
   }) {

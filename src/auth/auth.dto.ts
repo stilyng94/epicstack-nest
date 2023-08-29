@@ -23,7 +23,7 @@ const VerificationTypesSchema = z.union([
   z.literal('2fa'),
   z.literal('2fa-verify'),
   z.literal('forgot-password'),
-  z.literal('onboarding'),
+  z.literal('registration'),
   z.literal('change-email'),
   z.literal('login'),
 ]);

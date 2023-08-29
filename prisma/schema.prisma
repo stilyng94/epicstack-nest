@@ -14,7 +14,7 @@ generator zod {
   provider = "nestjs-zod-prisma"
   output   = "./generated/zod" // (default) the directory where generated zod schemas will be saved
 
-  relationModel = true // (default) Create and export both plain and related models.
+  relationModel = false // (default) Create and export both plain and related models.
   // relationModel         = "default" // Do not export model without relations.
   // relationModel         = false // Do not generate related model
 
@@ -50,13 +50,15 @@ model User {
   id                     String         @id @default(cuid()) ///@z.string().cuid2()
   email                  String         @unique ///@z.string().toLowerCase().email()
   username               String?
-  roles                  Role[]
+  role                   Role           @relation(fields: [roleId], references: [id])
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
   RefreshToken           RefreshToken[]
   isTwoFactorAuthEnabled Boolean        @default(false)
   Account                Account[]
   isVerified             Boolean        @default(false)
+  roleId                 String
+  Docs                   Docs[]
 }
 
 model VerificationToken {
@@ -102,4 +104,15 @@ model Account {
 
   @@unique([provider, subject])
   @@index([userId])
+}
+
+model Docs {
+  id        String   @id @default(cuid()) ///@z.string().cuid2()
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  path      String
+  filename  String
+  mimetype  String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
 }

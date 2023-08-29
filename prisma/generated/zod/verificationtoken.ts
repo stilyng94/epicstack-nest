@@ -1,5 +1,5 @@
-import * as z from "nestjs-zod/z"
-import { createZodDto } from "nestjs-zod/dto"
+import * as z from 'nestjs-zod/z';
+import { createZodDto } from 'nestjs-zod/dto';
 
 export const VerificationTokenSchema = z.object({
   id: z.string().cuid2(),
@@ -7,7 +7,14 @@ export const VerificationTokenSchema = z.object({
    * The type of verification, e.g. "email" or "phone number"
    */
   target: z.string(),
-  type: z.union([z.literal('2fa'), z.literal('2fa-verify'), z.literal('forgot-password'), z.literal('onboarding'), z.literal('login'), z.literal('change-email')]),
+  type: z.union([
+    z.literal('2fa'),
+    z.literal('2fa-verify'),
+    z.literal('forgot-password'),
+    z.literal('registration'),
+    z.literal('login'),
+    z.literal('change-email'),
+  ]),
   /**
    * When it's safe to delete this verification
    */
@@ -29,7 +36,8 @@ export const VerificationTokenSchema = z.object({
    * The number of seconds the otp is valid for
    */
   period: z.number().int(),
-})
+});
 
-export class VerificationTokenDto extends createZodDto(VerificationTokenSchema) {
-}
+export class VerificationTokenDto extends createZodDto(
+  VerificationTokenSchema,
+) {}

@@ -18,6 +18,18 @@ async function bootstrap() {
   const envConfigDto = app.get(EnvConfigDto);
   const logger = new NestLogger('Bootstrap');
 
+  // const typesenseService = app.get(TypesenseService);
+
+  // await typesenseService.client.collections().create({
+  //   name: 'docs',
+  //   fields: [
+  //     { name: 'filename', type: 'string', facet: true, index: true },
+  //     { name: 'id', type: 'string', facet: false, index: true },
+  //     { name: 'path', type: 'auto', facet: false, index: false },
+  //     { name: 'mimetype', type: 'auto', facet: false, index: false },
+  //   ],
+  // });
+
   if (envConfigDto.ENV === 'production') {
     app.set('trust proxy', '1');
     app.disable('x-powered-by');
@@ -51,17 +63,19 @@ async function bootstrap() {
 
   app.enableCors({ optionsSuccessStatus: HttpStatus.OK });
 
-  const config = new DocumentBuilder()
-    .setTitle('EpicStack-Nest')
-    .setDescription('EpicStack-Nest API description')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  patchNestJsSwagger();
-  const document = SwaggerModule.createDocument(app, config, {
-    operationIdFactory: (_: string, methodKey: string) => methodKey,
-  });
-  SwaggerModule.setup('api', app, document);
+  if (envConfigDto.ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('EpicStack-Nest')
+      .setDescription('EpicStack-Nest API description')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    patchNestJsSwagger();
+    const document = SwaggerModule.createDocument(app, config, {
+      operationIdFactory: (_: string, methodKey: string) => methodKey,
+    });
+    SwaggerModule.setup('api', app, document);
+  }
 
   await app.listen(envConfigDto.PORT);
 

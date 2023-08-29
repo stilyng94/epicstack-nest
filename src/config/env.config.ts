@@ -1,4 +1,4 @@
-import { createZodDto, zodToOpenAPI } from 'nestjs-zod';
+import { createZodDto } from 'nestjs-zod';
 import { z } from 'nestjs-zod/z';
 
 export const EnvConfigSchema = z.object({
@@ -16,8 +16,12 @@ export const EnvConfigSchema = z.object({
   MAIL_HOST: z.string(),
   MAIL_PORT: z.coerce.number().int().positive(),
   MAIL_SECURE: z.coerce.number().transform<boolean>((arg) => Boolean(arg)),
+  TYPESENSE_API_KEY: z.string(),
+  TYPESENSE_HOST: z.string().default('localhost'),
+  TYPESENSE_PROTOCOL: z
+    .union([z.literal('http'), z.literal('https')])
+    .default('http'),
+  TYPESENSE_PORT: z.coerce.number().int().positive().describe('Typesense port'),
 });
-
-export const EnvConfigApi = zodToOpenAPI(EnvConfigSchema);
 
 export class EnvConfigDto extends createZodDto(EnvConfigSchema) {}

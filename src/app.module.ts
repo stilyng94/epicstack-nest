@@ -1,9 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, ValidationPipe } from '@nestjs/common';
 import { dotenvLoader, TypedConfigModule } from 'nest-typed-config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { EnvConfigSchema, EnvConfigDto } from './config/env.config';
-import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ZodSerializerInterceptor, ZodValidationPipe } from 'nestjs-zod';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
@@ -13,16 +13,20 @@ import {
   providePrismaClientExceptionFilter,
 } from 'nestjs-prisma';
 import { PrismaConfigService } from './config/prisma.config.service';
-import { TwoFactorAuthService } from './two-factor-auth/two-factor-auth.service';
-import { TwoFactorAuthController } from './two-factor-auth/two-factor-auth.controller';
 import { TwoFactorAuthModule } from './two-factor-auth/two-factor-auth.module';
 import { LoggerErrorInterceptor, LoggerModule } from 'nestjs-pino';
-import { OauthModule } from './oauth/oauth.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
-import { ScheduleModule } from '@nestjs/schedule';
 import { AccessControlModule } from 'nest-access-control';
-import { RBAC_POLICY } from './auth/rbac-policy';
+import { RBAC_POLICY } from './auth/app.roles';
+import { HealthModule } from './health/health.module';
+import { DocsModule } from './docs/docs.module';
+import { OauthModule } from './oauth/oauth.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerBehindProxyGuardGuard } from './shared/throttler-behind-proxy-guard.guard';
+import { TypesenseModule } from './typesense/typesense.module';
+
 @Module({
   imports: [
     TypedConfigModule.forRoot({
@@ -55,6 +59,11 @@ import { RBAC_POLICY } from './auth/rbac-policy';
     PrismaModule.forRootAsync({
       isGlobal: true,
       useClass: PrismaConfigService,
+    }),
+    ThrottlerModule.forRootAsync({
+      imports: [TypedConfigModule],
+      inject: [EnvConfigDto],
+      useFactory: () => ({ ttl: 60, limit: 10 }),
     }),
     JwtModule.registerAsync({
       global: true,
@@ -95,22 +104,28 @@ import { RBAC_POLICY } from './auth/rbac-policy';
         },
       }),
     }),
+    CacheModule.register({ isGlobal: true, ttl: 30000 }),
     AccessControlModule.forRoles(RBAC_POLICY, {}),
+    OauthModule,
     AuthModule,
     UserModule,
     TwoFactorAuthModule,
-    OauthModule,
-
-    ScheduleModule.forRoot(),
+    HealthModule,
+    DocsModule,
+    TypesenseModule,
   ],
-  controllers: [AppController, TwoFactorAuthController],
+  controllers: [AppController],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ZodSerializerInterceptor },
     { provide: APP_INTERCEPTOR, useClass: LoggerErrorInterceptor },
     { provide: APP_PIPE, useClass: ZodValidationPipe },
+    { provide: APP_PIPE, useClass: ValidationPipe },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerBehindProxyGuardGuard,
+    },
     providePrismaClientExceptionFilter(),
     AppService,
-    TwoFactorAuthService,
   ],
 })
 export class AppModule {}

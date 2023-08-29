@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  typesense:
+    image: typesense/typesense:0.25.0
+    restart: on-failure
+    ports:
+      - "8108:8108"
+    volumes:
+      - ./data/typesense:/data
+    environment:
+      - TYPESENSE_API_KEY=xyz
+    command: '--data-dir /data --api-key=xyz --enable-cors'
+
+  maildev:
+    image: soulteary/maildev@sha256:0e8e2237bdece45ae954ca047e72dca0e649750afcb73215cdc52b519a7caf12
+    restart: on-failure
+    ports:
+      - "5011:1080"
+      - "1025:1025"

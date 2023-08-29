@@ -8,15 +8,10 @@ import { User } from '@prisma/client';
 import { PrismaService } from 'nestjs-prisma';
 import { JwtService } from '@nestjs/jwt';
 import { hashPassword } from './auth.helpers';
-import {
-  LoginResponseDto,
-  TokenPayloadDto,
-  VerificationTypes,
-} from './auth.dto';
+import { TokenPayloadDto, VerificationTypes } from './auth.dto';
 import { EnvConfigDto } from '@/config/env.config';
-import { CreateUserDto } from '@/user/user.dto';
+import { CreateUserDto, UserWithRoleDto } from '@/user/user.dto';
 import { UserService } from '@/user/user.service';
-import { UserDto } from '@generated/zod';
 import { MailerService } from '@nestjs-modules/mailer';
 import { generateTOTP, verifyTOTP } from '@epic-web/totp';
 import { typeOTPConfig } from '@/utils/crypto-utils';
@@ -32,7 +27,7 @@ export class AuthService {
   ) {}
 
   async register(userData: CreateUserDto) {
-    const createdUser = await this.userService.create({
+    const createdUser = await this.userService.createUser({
       ...userData,
     });
     if (!createdUser) {
@@ -40,7 +35,7 @@ export class AuthService {
     }
     const { verifyUrl } = await this.prepareVerification({
       period: 10 * 60, // 10 minutes
-      type: 'onboarding',
+      type: 'registration',
       target: userData.email,
       destinationUrl: 'https://localhost:5010/frontend/verify',
     });
@@ -56,6 +51,7 @@ export class AuthService {
   async loginUser(email: string) {
     const user = await this.prisma.user.findFirst({
       where: { email },
+      include: { role: { select: { name: true } } },
     });
     if (user) {
       const { verifyUrl } = await this.prepareVerification({
@@ -64,6 +60,7 @@ export class AuthService {
         target: user.email,
         destinationUrl: 'https://localhost:5010/frontend/verify',
       });
+
       this.emailService.sendMail({
         to: user.email,
         subject: 'Login',
@@ -77,7 +74,7 @@ export class AuthService {
     user,
     is2faAuth = false,
   }: {
-    user: UserDto;
+    user: UserWithRoleDto;
     is2faAuth?: boolean;
   }) {
     const payload: TokenPayloadDto = { id: user.id, is2faAuth };
@@ -166,7 +163,7 @@ export class AuthService {
     return { otp, verifyUrl: verifyUrl?.toString() };
   }
 
-  async completeOnBoarding({
+  async completeOnRegistration({
     code,
     type,
     target,
@@ -244,6 +241,7 @@ export class AuthService {
     await this.deleteCode({ target, type });
     const user = await this.prisma.user.findUnique({
       where: { email: target },
+      include: { role: { select: { name: true } } },
     });
     if (!user) {
       throw new BadRequestException();

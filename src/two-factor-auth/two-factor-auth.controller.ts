@@ -7,8 +7,8 @@ import { AuthService } from '@/auth/auth.service';
 import { JwtAuthGuard } from '@/auth/jwt.auth.guard';
 import { CurrentUser } from '@/user/currentuser.decorator';
 import { UserService } from '@/user/user.service';
-import { UserDto } from '@generated/zod';
 import { LoginCallbackResponseDto, LoginResponseDto } from '@/auth/auth.dto';
+import { UserWithRoleDto } from '@/user/user.dto';
 
 @Controller('2fa')
 export class TwoFactorAuthController {
@@ -22,7 +22,7 @@ export class TwoFactorAuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOkResponse({ type: Generate2faResponseDto })
-  async register2fa(@CurrentUser() user: UserDto) {
+  async register2fa(@CurrentUser() user: UserWithRoleDto) {
     return this.twoFactorAuthService.generateTwoFactorAuthenticationSecret(
       user,
     ) satisfies Promise<Generate2faResponseDto>;
@@ -34,7 +34,7 @@ export class TwoFactorAuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async activateTwoFactorAuth(
-    @CurrentUser() user: UserDto,
+    @CurrentUser() user: UserWithRoleDto,
     @Body() twoFactorAuthCode: OtpRequestDTO,
   ) {
     await this.twoFactorAuthService.isTwoFactorAuthenticationCodeValid({
@@ -53,7 +53,7 @@ export class TwoFactorAuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   async authenticate(
-    @CurrentUser() user: UserDto,
+    @CurrentUser() user: UserWithRoleDto,
     @Body() twoFactorAuthCode: OtpRequestDTO,
   ) {
     await this.twoFactorAuthService.isTwoFactorAuthenticationCodeValid({
