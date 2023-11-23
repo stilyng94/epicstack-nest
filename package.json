@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@compodoc/compodoc": "^1.1.21",
-    "@epic-web/totp": "git+ssh://git@github-personal:stilyng94/totp.git",
+    "@epic-web/totp": "^1.1.1",
     "@googleapis/oauth2": "^1.0.2",
     "@nestjs-modules/mailer": "^1.9.1",
     "@nestjs/cache-manager": "^2.1.0",
@@ -117,6 +117,7 @@
     }
   },
   "prisma": {
-    "seed": "ts-node --transpile-only prisma/seed.ts"
+    "schema": "src/prisma/schema.prisma",
+    "seed": "node ./dist/seed/seed"
   }
 }

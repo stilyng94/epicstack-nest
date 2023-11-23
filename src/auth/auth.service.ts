@@ -13,8 +13,8 @@ import { EnvConfigDto } from '@/config/env.config';
 import { CreateUserDto, UserWithRoleDto } from '@/user/user.dto';
 import { UserService } from '@/user/user.service';
 import { MailerService } from '@nestjs-modules/mailer';
-import { generateTOTP, verifyTOTP } from '@epic-web/totp';
 import { typeOTPConfig } from '@/utils/crypto-utils';
+import { OtpRequestDTO } from '@/two-factor-auth/two-factor-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -144,6 +144,8 @@ export class AuthService {
       ? this.getDestinationUrl({ type, target, destinationUrl })
       : null;
 
+    const { generateTOTP } = await import('@epic-web/totp');
+
     const { otp, ...otpConfig } = generateTOTP({ algorithm: 'SHA256', period });
     // delete old verifications. Users should not have more than one verification
     // of a specific type for a specific target at a time.
@@ -163,15 +165,7 @@ export class AuthService {
     return { otp, verifyUrl: verifyUrl?.toString() };
   }
 
-  async completeOnRegistration({
-    code,
-    type,
-    target,
-  }: {
-    code: string;
-    type: VerificationTypes;
-    target: string;
-  }) {
+  async completeOnRegistration({ code, type, target }: OtpRequestDTO) {
     await this.isCodeValid({ code, type, target });
     await this.deleteCode({ target, type });
     await this.prisma.user.update({
@@ -199,6 +193,8 @@ export class AuthService {
       select: { algorithm: true, secret: true, period: true },
     });
     if (!verification) throw new BadRequestException();
+
+    const { verifyTOTP } = await import('@epic-web/totp');
 
     const result = verifyTOTP({
       otp: code,

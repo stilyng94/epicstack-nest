@@ -18,25 +18,14 @@ async function bootstrap() {
   const envConfigDto = app.get(EnvConfigDto);
   const logger = new NestLogger('Bootstrap');
 
-  // const typesenseService = app.get(TypesenseService);
-
-  // await typesenseService.client.collections().create({
-  //   name: 'docs',
-  //   fields: [
-  //     { name: 'filename', type: 'string', facet: true, index: true },
-  //     { name: 'id', type: 'string', facet: false, index: true },
-  //     { name: 'path', type: 'auto', facet: false, index: false },
-  //     { name: 'mimetype', type: 'auto', facet: false, index: false },
-  //   ],
-  // });
+  app.set('trust proxy', '1');
+  app.disable('x-powered-by');
 
   if (envConfigDto.ENV === 'production') {
-    app.set('trust proxy', '1');
-    app.disable('x-powered-by');
     // ensure HTTPS only (X-Forwarded-Proto comes from Host)
     app.use((req: Request, res: Response, next: NextFunction) => {
       const proto = req.get('X-Forwarded-Proto');
-      const host = req.get('X-Forwarded-Host') ?? req.get('host') ?? '';
+      const host = req.get('X-Forwarded-Host') ?? req.get('host');
       if (proto === 'http') {
         res.set('X-Forwarded-Proto', 'https');
         res.redirect(`https://${host}${req.originalUrl}`);
