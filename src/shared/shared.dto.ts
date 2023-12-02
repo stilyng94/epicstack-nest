@@ -10,18 +10,6 @@ export class PaginationParamsDto extends createZodDto(
   }),
 ) {}
 
-export class PaginatedResponseDto<T> {
-  count: number;
-  items: Array<T>;
-  cursor: string;
-
-  constructor(count: number, items: Array<T>, cursor: string) {
-    this.count = count;
-    this.items = items;
-    this.cursor = cursor;
-  }
-}
-
 export function createPaginatedResponseSchema<ItemType extends z.ZodTypeAny>(
   itemSchema: ItemType,
 ) {
@@ -38,7 +26,8 @@ const searchParamsSchema: z.ZodType<SearchParams> = z.object({
   filter_by: z.string().optional(),
   sort_by: z.string().optional(),
   page: z.coerce.number().positive().optional(),
-  per_page: z.coerce.number().positive().optional(),
+  limit: z.coerce.number().positive().optional(),
+  facet_by: z.string().optional(),
 });
 
 export class SearchParamsDTo extends createZodDto(searchParamsSchema) {}

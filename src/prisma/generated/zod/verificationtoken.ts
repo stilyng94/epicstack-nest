@@ -9,9 +9,10 @@ export const VerificationTokenSchema = z.object({
   target: z.string(),
   type: z.union([
     z.literal('2fa'),
+    z.literal('registration'),
     z.literal('2fa-verify'),
     z.literal('forgot-password'),
-    z.literal('registration'),
+    z.literal('onboarding'),
     z.literal('login'),
     z.literal('change-email'),
   ]),

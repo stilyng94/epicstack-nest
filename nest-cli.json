@@ -4,7 +4,18 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "assets": [{ "include": "**/**/*.prisma", "watchAssets": true }]
+    "assets": [
+      {
+        "include": "prisma/*.prisma",
+        "watchAssets": true,
+        "outDir": "dist/src"
+      },
+      {
+        "include": "templates/**/*",
+        "outDir": "dist/src",
+        "watchAssets": true
+      }
+    ]
   },
   "projects": {
     "api": {
@@ -13,7 +24,7 @@
     },
     "seed": {
       "type": "application",
-      "entryFile": "seed"
+      "entryFile": "seed/seed"
     }
   }
 }

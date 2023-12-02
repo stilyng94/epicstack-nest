@@ -9,10 +9,10 @@ import {
   PaginatedUserResponseDto,
   UserWithRoleDto,
 } from './user.dto';
-import { CreateWithOauthDto } from '@/oauth/oauth.dto';
 import { PaginationParamsDto } from '@/shared/shared.dto';
-import { AccountDto } from '@generated/zod';
+import { AccountDto } from '@/prisma/generated/zod';
 import { AppRoles } from '@/auth/app.roles';
+import { CreateWithOauthDto } from '@/oauth/oauth.dto';
 
 @Injectable()
 export class UserService {

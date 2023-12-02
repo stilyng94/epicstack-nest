@@ -1,5 +1,10 @@
-import { HttpStatus, Logger as NestLogger } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import {
+  HttpStatus,
+  Logger as NestLogger,
+  VERSION_NEUTRAL,
+  VersioningType,
+} from '@nestjs/common';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -7,19 +12,32 @@ import { patchNestJsSwagger } from 'nestjs-zod';
 import { EnvConfigDto } from './config/env.config';
 import helmet from 'helmet';
 import { NextFunction, Request, Response } from 'express';
-import { Logger } from 'nestjs-pino';
+import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
+import { GlobalExceptionFilter } from './global-exception/global-exception.filter';
+import hpp from 'hpp';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
-  app.useLogger(app.get(Logger));
+  const logger = new NestLogger('Bootstrap');
 
   const envConfigDto = app.get(EnvConfigDto);
-  const logger = new NestLogger('Bootstrap');
+  const { httpAdapter } = app.get(HttpAdapterHost);
+
+  app.setGlobalPrefix('api', { exclude: ['health'] });
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: VERSION_NEUTRAL,
+  });
+  app.useLogger(app.get(Logger));
 
   app.set('trust proxy', '1');
   app.disable('x-powered-by');
+  app.use(hpp());
+  app.enableCors({ optionsSuccessStatus: HttpStatus.NO_CONTENT });
+  app.useGlobalFilters(new GlobalExceptionFilter(httpAdapter));
+  app.useGlobalInterceptors(new LoggerErrorInterceptor());
 
   if (envConfigDto.ENV === 'production') {
     // ensure HTTPS only (X-Forwarded-Proto comes from Host)
@@ -49,8 +67,6 @@ async function bootstrap() {
       }),
     );
   }
-
-  app.enableCors({ optionsSuccessStatus: HttpStatus.OK });
 
   if (envConfigDto.ENV !== 'production') {
     const config = new DocumentBuilder()

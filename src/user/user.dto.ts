@@ -1,6 +1,6 @@
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'nestjs-zod/z';
-import { RoleSchema, UserSchema } from '@generated/zod';
+import { RoleSchema, UserSchema } from '@/prisma/generated/zod';
 import { createPaginatedResponseSchema } from '@/shared/shared.dto';
 
 const CreateUserSchema = z.lazy(() =>

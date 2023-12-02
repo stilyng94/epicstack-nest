@@ -6,7 +6,7 @@ import Typesense, { Client } from 'typesense';
 export class TypesenseService {
   private _client: Client;
 
-  constructor(private readonly envConfigDto: EnvConfigDto) {
+  constructor(envConfigDto: EnvConfigDto) {
     this._client = new Typesense.Client({
       nodes: [
         {

@@ -1,21 +1,37 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TwoFactorAuthService } from './two-factor-auth.service';
-import { AuthModule } from '@/auth/auth.module';
-import { UserModule } from '@/user/user.module';
+import { JwtService } from '@nestjs/jwt';
+import { EnvConfigDto } from '@/config/env.config';
+import { PrismaService } from 'nestjs-prisma';
+import { AuthService } from '@/auth/auth.service';
+import { UserService } from '@/user/user.service';
+import { MAILER_OPTIONS, MailerService } from '@nestjs-modules/mailer';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 describe('TwoFactorAuthService', () => {
-  let service: TwoFactorAuthService;
+  let twoFactorService: TwoFactorAuthService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TwoFactorAuthService],
-      imports: [UserModule, AuthModule],
+      providers: [
+        TwoFactorAuthService,
+        JwtService,
+        EnvConfigDto,
+        PrismaService,
+        AuthService,
+        {
+          provide: MAILER_OPTIONS,
+          useValue: { transport: new SMTPTransport({}) },
+        },
+        MailerService,
+        UserService,
+      ],
     }).compile();
 
-    service = module.get<TwoFactorAuthService>(TwoFactorAuthService);
+    twoFactorService = module.get<TwoFactorAuthService>(TwoFactorAuthService);
   });
 
   it('should be defined', () => {
-    expect(service).toBeDefined();
+    expect(twoFactorService).toBeDefined();
   });
 });

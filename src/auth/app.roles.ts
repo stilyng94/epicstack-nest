@@ -10,11 +10,11 @@ export const RBAC_POLICY: RolesBuilder = new RolesBuilder();
 RBAC_POLICY
   // user
   .grant(AppRoles.USER)
-  .readAny(['user'])
-  .createOwn(['uploadDoc'])
-  .readOwn(['streamFile'])
+  .readOwn(['user', 'streamFile'])
+  .createOwn(['docs'])
   // admin
   .grant(AppRoles.ADMIN)
   .extend(AppRoles.USER)
-  .readAny(['streamFile'])
+  .createAny('docs')
+  .readAny(['docs', 'user'])
   .lock();

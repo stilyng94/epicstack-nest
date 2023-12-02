@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '@/auth/jwt.auth.guard';
 import { CurrentUser } from './currentuser.decorator';
 import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
@@ -9,7 +9,6 @@ import { PaginatedUserResponseDto, UserWithRoleDto } from './user.dto';
 import { AcRoleGuardGuard } from '@/auth/ac-role-guard.guard';
 import { UserService } from './user.service';
 import { PaginationParamsDto } from '@/shared/shared.dto';
-import { RBAC_POLICY } from '@/auth/app.roles';
 
 @Controller('user')
 export class UserController {
@@ -19,25 +18,27 @@ export class UserController {
   @ApiOkResponse({ type: UserWithRoleDto })
   @ZodSerializerDto(UserWithRoleDto)
   @UseGuards(JwtAuthGuard, AcRoleGuardGuard)
-  @UseRoles({ resource: 'user', action: 'read', possession: 'any' })
+  @UseRoles({ resource: 'user', action: 'read', possession: 'own' })
   @ApiBearerAuth()
   getProfile(@CurrentUser() user: UserWithRoleDto) {
-    const permission = RBAC_POLICY.can(user.role.name).readAny('user');
-    console.log('PERM ', permission);
-
     return user;
   }
 
-  @Get('profiler')
+  @Get(':id')
   @ApiOkResponse({ type: UserWithRoleDto })
   @ZodSerializerDto(UserWithRoleDto)
-  @UseGuards(JwtAuthGuard, TwoFactorAuthGuard)
+  @UseGuards(JwtAuthGuard, TwoFactorAuthGuard, AcRoleGuardGuard)
+  @UseRoles({ resource: 'user', action: 'read', possession: 'any' })
   @ApiBearerAuth()
-  getProfiler(@CurrentUser() user: UserWithRoleDto) {
-    return user;
+  getProfiler(@Param('id') id: string) {
+    return this.userService.getUserById(id);
   }
 
-  @Get('all')
+  @Get()
+  @ZodSerializerDto(PaginatedUserResponseDto)
+  @UseGuards(JwtAuthGuard, TwoFactorAuthGuard, AcRoleGuardGuard)
+  @UseRoles({ resource: 'user', action: 'read', possession: 'any' })
+  @ApiBearerAuth()
   @ApiOkResponse({ type: PaginatedUserResponseDto })
   async getUsers(@Query() query: PaginationParamsDto) {
     return this.userService.getUsers(query);
