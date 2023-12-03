@@ -7,14 +7,13 @@ import {
 import { User } from '@prisma/client';
 import { PrismaService } from 'nestjs-prisma';
 import { JwtService } from '@nestjs/jwt';
-import { hashPassword } from './auth.helpers';
 import { TokenPayloadDto, VerificationTypes } from './auth.dto';
 import { EnvConfigDto } from '@/config/env.config';
 import { CreateUserDto, UserWithRoleDto } from '@/user/user.dto';
 import { UserService } from '@/user/user.service';
 import { MailerService } from '@nestjs-modules/mailer';
-import { generateTOTP, verifyTOTP } from '@epic-web/totp';
-import { typeOTPConfig } from '@/utils/crypto-utils';
+import { OTP_WINDOW } from '@/utils/crypto-utils';
+import { OtpRequestDTO } from '@/two-factor-auth/two-factor-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -34,7 +33,7 @@ export class AuthService {
       throw new ConflictException('Account already exists');
     }
     const { verifyUrl } = await this.prepareVerification({
-      period: 10 * 60, // 10 minutes
+      period: 60 * 60, // 10 minutes
       type: 'registration',
       target: userData.email,
       destinationUrl: 'https://localhost:5010/frontend/verify',
@@ -80,7 +79,7 @@ export class AuthService {
     const payload: TokenPayloadDto = { id: user.id, is2faAuth };
     const accessToken = this.setAccessToken(payload);
     const refreshToken = await this.setRefreshToken(payload);
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken } as const;
   }
 
   setAccessToken(payload: TokenPayloadDto) {
@@ -92,11 +91,12 @@ export class AuthService {
   async setRefreshToken(payload: TokenPayloadDto) {
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.envConfigDto.REFRESH_TOKEN_SECRET,
+      expiresIn: '7d',
     });
     await this.prisma.refreshToken.create({
       data: { userId: payload.id, token: refreshToken },
     });
-    return hashPassword(refreshToken);
+    return refreshToken;
   }
 
   async getUserByRefreshToken(refreshToken: string, userId: string) {
@@ -114,7 +114,7 @@ export class AuthService {
     await this.prisma.refreshToken.deleteMany({ where: { userId: user.id } });
   }
 
-  getDestinationUrl({
+  private getDestinationUrl({
     type,
     target,
     destinationUrl,
@@ -144,6 +144,8 @@ export class AuthService {
       ? this.getDestinationUrl({ type, target, destinationUrl })
       : null;
 
+    const { generateTOTP } = await import('@epic-web/totp');
+
     const { otp, ...otpConfig } = generateTOTP({ algorithm: 'SHA256', period });
     // delete old verifications. Users should not have more than one verification
     // of a specific type for a specific target at a time.
@@ -152,7 +154,10 @@ export class AuthService {
       data: {
         type,
         target,
-        ...otpConfig,
+        algorithm: otpConfig.algorithm,
+        digits: otpConfig.digits,
+        period: otpConfig.period,
+        secret: otpConfig.secret,
         expiresAt: new Date(Date.now() + otpConfig.period * 1000),
       },
     });
@@ -163,15 +168,7 @@ export class AuthService {
     return { otp, verifyUrl: verifyUrl?.toString() };
   }
 
-  async completeOnRegistration({
-    code,
-    type,
-    target,
-  }: {
-    code: string;
-    type: VerificationTypes;
-    target: string;
-  }) {
+  async completeOnRegistration({ code, type, target }: OtpRequestDTO) {
     await this.isCodeValid({ code, type, target });
     await this.deleteCode({ target, type });
     await this.prisma.user.update({
@@ -198,17 +195,19 @@ export class AuthService {
       },
       select: { algorithm: true, secret: true, period: true },
     });
-    if (!verification) throw new BadRequestException();
+    if (!verification) throw new BadRequestException('invalid code');
+
+    const { verifyTOTP } = await import('@epic-web/totp');
 
     const result = verifyTOTP({
       otp: code,
       secret: verification.secret,
       algorithm: verification.algorithm,
       period: verification.period,
-      ...typeOTPConfig[type],
+      ...OTP_WINDOW[type],
     });
 
-    if (!result) throw new BadRequestException();
+    if (!result) throw new BadRequestException('invalid code');
   }
 
   private async deleteCode({
@@ -244,7 +243,7 @@ export class AuthService {
       include: { role: { select: { name: true } } },
     });
     if (!user) {
-      throw new BadRequestException();
+      throw new BadRequestException('invalid code');
     }
 
     return this.generateAuthTokens({ user });

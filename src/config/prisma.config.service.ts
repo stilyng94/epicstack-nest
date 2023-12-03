@@ -14,7 +14,7 @@ export class PrismaConfigService implements PrismaOptionsFactory {
         errorFormat: 'pretty',
         log: [
           {
-            emit: 'event',
+            emit: 'stdout',
             level: 'query',
           },
           {

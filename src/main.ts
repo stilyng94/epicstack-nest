@@ -1,5 +1,10 @@
-import { HttpStatus, Logger as NestLogger } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
+import {
+  HttpStatus,
+  Logger as NestLogger,
+  VERSION_NEUTRAL,
+  VersioningType,
+} from '@nestjs/common';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -7,36 +12,38 @@ import { patchNestJsSwagger } from 'nestjs-zod';
 import { EnvConfigDto } from './config/env.config';
 import helmet from 'helmet';
 import { NextFunction, Request, Response } from 'express';
-import { Logger } from 'nestjs-pino';
+import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
+import { GlobalExceptionFilter } from './global-exception/global-exception.filter';
+import hpp from 'hpp';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
-  app.useLogger(app.get(Logger));
-
-  const envConfigDto = app.get(EnvConfigDto);
   const logger = new NestLogger('Bootstrap');
 
-  // const typesenseService = app.get(TypesenseService);
+  const envConfigDto = app.get(EnvConfigDto);
+  const { httpAdapter } = app.get(HttpAdapterHost);
 
-  // await typesenseService.client.collections().create({
-  //   name: 'docs',
-  //   fields: [
-  //     { name: 'filename', type: 'string', facet: true, index: true },
-  //     { name: 'id', type: 'string', facet: false, index: true },
-  //     { name: 'path', type: 'auto', facet: false, index: false },
-  //     { name: 'mimetype', type: 'auto', facet: false, index: false },
-  //   ],
-  // });
+  app.setGlobalPrefix('api', { exclude: ['health'] });
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: VERSION_NEUTRAL,
+  });
+  app.useLogger(app.get(Logger));
+
+  app.set('trust proxy', '1');
+  app.disable('x-powered-by');
+  app.use(hpp());
+  app.enableCors({ optionsSuccessStatus: HttpStatus.NO_CONTENT });
+  app.useGlobalFilters(new GlobalExceptionFilter(httpAdapter));
+  app.useGlobalInterceptors(new LoggerErrorInterceptor());
 
   if (envConfigDto.ENV === 'production') {
-    app.set('trust proxy', '1');
-    app.disable('x-powered-by');
     // ensure HTTPS only (X-Forwarded-Proto comes from Host)
     app.use((req: Request, res: Response, next: NextFunction) => {
       const proto = req.get('X-Forwarded-Proto');
-      const host = req.get('X-Forwarded-Host') ?? req.get('host') ?? '';
+      const host = req.get('X-Forwarded-Host') ?? req.get('host');
       if (proto === 'http') {
         res.set('X-Forwarded-Proto', 'https');
         res.redirect(`https://${host}${req.originalUrl}`);
@@ -60,8 +67,6 @@ async function bootstrap() {
       }),
     );
   }
-
-  app.enableCors({ optionsSuccessStatus: HttpStatus.OK });
 
   if (envConfigDto.ENV !== 'production') {
     const config = new DocumentBuilder()

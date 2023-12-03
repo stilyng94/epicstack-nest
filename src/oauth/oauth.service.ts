@@ -1,11 +1,15 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { auth, oauth2 } from '@googleapis/oauth2';
 import { AuthenticateWithOauthDto, CreateWithOauthDto } from './oauth.dto';
 import { EnvConfigDto } from '@/config/env.config';
 import { AuthService } from '@/auth/auth.service';
 import { UserService } from '@/user/user.service';
 import { UserWithRoleDto } from '@/user/user.dto';
-import { AccountDto } from '@generated/zod';
+import { AccountDto } from '@/prisma/generated/zod';
 
 @Injectable()
 export class OauthService {
@@ -55,22 +59,13 @@ export class OauthService {
     return this.getAuthTokens(existingOAuthUser.user);
   }
 
-  private async handleRegisteredUser(user: UserWithRoleDto) {
-    const { accessToken, refreshToken } = await this.getAuthTokens(user);
-    return {
-      accessToken,
-      refreshToken,
-      user,
-    };
-  }
-
   private async registerUser(dto: CreateWithOauthDto) {
     const userData = await this.getUserData(dto.token);
     const user = await this.userService.createUserWithOauth({
       ...dto,
       username: userData.name,
     });
-    return this.handleRegisteredUser(user);
+    return this.getAuthTokens(user);
   }
 
   private async getUserData(token: string) {
@@ -132,7 +127,7 @@ export class OauthService {
     });
 
     if (existingOAuthUser) {
-      throw new BadRequestException('Account already linked');
+      throw new ConflictException('Account already linked');
     }
     return this.userService.linkOauthAccount({
       provider: provider,

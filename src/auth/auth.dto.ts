@@ -1,4 +1,4 @@
-import { UserSchema } from '@generated/zod';
+import { UserSchema, VerificationTokenSchema } from '@/prisma/generated/zod';
 import { createZodDto } from 'nestjs-zod/dto';
 import { z } from 'nestjs-zod/z';
 
@@ -19,16 +19,11 @@ const LoginResponseSchema = z.object({
 
 export class LoginResponseDto extends createZodDto(LoginResponseSchema) {}
 
-const VerificationTypesSchema = z.union([
-  z.literal('2fa'),
-  z.literal('2fa-verify'),
-  z.literal('forgot-password'),
-  z.literal('registration'),
-  z.literal('change-email'),
-  z.literal('login'),
-]);
+const VerificationTypesSchema = VerificationTokenSchema.pick({
+  type: true,
+});
 
-export type VerificationTypes = z.infer<typeof VerificationTypesSchema>;
+export type VerificationTypes = z.infer<typeof VerificationTypesSchema>['type'];
 
 export class LoginCallbackResponseDto extends createZodDto(
   z.object({ accessToken: z.string(), refreshToken: z.string() }),

@@ -1,4 +1,4 @@
-import { VerificationTokenSchema } from '@generated/zod';
+import { VerificationTokenSchema } from '@/prisma/generated/zod';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'nestjs-zod/z';
 

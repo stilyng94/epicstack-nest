@@ -1,0 +1,2 @@
+-- DELETE FROM User WHERE email = 'epicstack1-nest@mail.com';
+-- UPDATE User SET roleId = 'cllkuxddx0000x23o3nki0e34' WHERE id = 'clpdu9teh00016c2wktue8k0j';

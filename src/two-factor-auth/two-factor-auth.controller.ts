@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { TwoFactorAuthService } from './two-factor-auth.service';
 import { ZodSerializerDto } from 'nestjs-zod';
@@ -42,10 +49,12 @@ export class TwoFactorAuthController {
       user,
       type: '2fa',
     });
-
+    if (user.isTwoFactorAuthEnabled) {
+      throw new BadRequestException('2FA already enabled');
+    }
     await this.userService.turnOnTwoFactorAuth(user.id);
     await this.twoFactorAuthService.updateTokenType({ userId: user.id });
-    return { message: '2fa successfully activated' } satisfies LoginResponseDto;
+    return { message: '2FA successfully activated' } satisfies LoginResponseDto;
   }
 
   @Post('authenticate')

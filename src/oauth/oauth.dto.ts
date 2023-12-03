@@ -1,4 +1,4 @@
-import { AccountSchema } from '@generated/zod';
+import { AccountSchema } from '@/prisma/generated/zod';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'nestjs-zod/z';
 
