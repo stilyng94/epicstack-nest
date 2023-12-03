@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { AccessControlModule, RolesBuilder } from 'nest-access-control';
+import { AccessControlModule } from 'nest-access-control';
 import { RBAC_POLICY } from '@/auth/app.roles';
 
 describe('UserController', () => {

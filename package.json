@@ -46,7 +46,6 @@
     "@nestjs/throttler": "^4.2.1",
     "@prisma/client": "latest",
     "cache-manager": "^5.3.1",
-    "cron": "^2.4.4",
     "helmet": "^7.1.0",
     "hpp": "^0.2.3",
     "nest-access-control": "^3.1.0",

@@ -1,26 +1,30 @@
-import { EnvConfigDto } from '@/config/env.config';
-import { Injectable } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotImplementedException,
+  OnModuleInit,
+} from '@nestjs/common';
 import Typesense, { Client } from 'typesense';
+import type { TypesenseModuleOptions } from './typesense.module.options';
+import { TYPESENSE_MODULE_OPTIONS_TOKEN } from './typesense.module-definition';
 
 @Injectable()
-export class TypesenseService {
-  private _client: Client;
+export class TypesenseService implements OnModuleInit {
+  private _client: Client | undefined;
 
-  constructor(envConfigDto: EnvConfigDto) {
-    this._client = new Typesense.Client({
-      nodes: [
-        {
-          host: envConfigDto.TYPESENSE_HOST,
-          port: envConfigDto.TYPESENSE_PORT,
-          protocol: envConfigDto.TYPESENSE_PROTOCOL,
-        },
-      ],
-      apiKey: envConfigDto.TYPESENSE_API_KEY,
-      connectionTimeoutSeconds: 5,
-    });
+  constructor(
+    @Inject(TYPESENSE_MODULE_OPTIONS_TOKEN)
+    private options: TypesenseModuleOptions,
+  ) {}
+
+  onModuleInit() {
+    this._client = new Typesense.Client(this.options);
   }
 
   public get client(): Client {
+    if (!this._client) {
+      throw new NotImplementedException('Typesense client not initialized');
+    }
     return this._client;
   }
 }

@@ -1,4 +1,4 @@
-FROM node:lts-bullseye-slim@sha256:d93fb5c25db163dc795d40eabf66251a2daf6a2c6a2d21cc29930e754aef4c2c AS base
+FROM node:lts-bullseye-slim@sha256:f959c0047e2cc2dc01459067d9e898b7780862e52f4e7e80bb674f6040298f32 AS base
 
 RUN npm config set unsafe-perm true && npm install -g pnpm
 
@@ -36,7 +36,7 @@ COPY ./ ./
 RUN pnpm db:generate && pnpm build
 
 # Production image
-FROM node:lts-alpine3.18@sha256:c8245ebe9d86862ab40bbaee04f69f9787c57b83beb6e9a174e8afc154989e1f AS final
+FROM node:lts-alpine3.18@sha256:d016f19a31ac259d78dc870b4c78132cf9e52e89339ff319bdd9999912818f4a AS final
 
 RUN apk update && \
   apk add --no-cache ca-certificates openssl dumb-init && \
@@ -54,7 +54,7 @@ COPY --from=builder /usr/app/dist ./dist
 
 RUN chmod +x ./start.sh && chown node:node /app
 
-EXPOSE ${PORt}
+EXPOSE ${PORT}
 
 USER node
 

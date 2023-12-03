@@ -13,7 +13,7 @@ describe('DocsService', () => {
       providers: [
         DocsService,
         PrismaService,
-        TypesenseService,
+        { provide: TypesenseService, useValue: {} },
         EnvConfigDto,
         { provide: CACHE_MANAGER, useValue: {} },
       ],

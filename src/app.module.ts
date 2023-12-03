@@ -112,7 +112,23 @@ import path from 'node:path';
     TwoFactorAuthModule,
     HealthModule,
     DocsModule,
-    TypesenseModule,
+    TypesenseModule.registerAsync({
+      useFactory: (envConfigDto: EnvConfigDto) => {
+        return {
+          nodes: [
+            {
+              host: envConfigDto.TYPESENSE_HOST,
+              port: envConfigDto.TYPESENSE_PORT,
+              protocol: envConfigDto.TYPESENSE_PROTOCOL,
+            },
+          ],
+          apiKey: envConfigDto.TYPESENSE_API_KEY,
+          connectionTimeoutSeconds: 5,
+          logLevel: 'INFO',
+        };
+      },
+      inject: [EnvConfigDto],
+    }),
   ],
   controllers: [AppController],
   providers: [
