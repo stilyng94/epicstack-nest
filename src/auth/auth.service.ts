@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { User, VerificationToken } from '@prisma/client';
 import { PrismaService } from 'nestjs-prisma';
 import { JwtService } from '@nestjs/jwt';
 import { TokenPayloadDto, VerificationTypes } from './auth.dto';
@@ -13,7 +13,6 @@ import { CreateUserDto, UserWithRoleDto } from '@/user/user.dto';
 import { UserService } from '@/user/user.service';
 import { MailerService } from '@nestjs-modules/mailer';
 import { OTP_WINDOW } from '@/utils/crypto-utils';
-import { OtpRequestDTO } from '@/two-factor-auth/two-factor-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -168,21 +167,10 @@ export class AuthService {
     return { otp, verifyUrl: verifyUrl?.toString() };
   }
 
-  async completeOnRegistration({ code, type, target }: OtpRequestDTO) {
-    await this.isCodeValid({ code, type, target });
-    await this.deleteCode({ target, type });
-    await this.prisma.user.update({
-      where: { email: target },
-      data: { isVerified: true },
-    });
-  }
-
-  async isCodeValid({
-    code,
+  async getVerificationDetails({
     type,
     target,
   }: {
-    code: string;
     type: VerificationTypes;
     target: string;
   }) {
@@ -193,10 +181,13 @@ export class AuthService {
           { type, target, expiresAt: null },
         ],
       },
-      select: { algorithm: true, secret: true, period: true },
     });
     if (!verification) throw new BadRequestException('invalid code');
 
+    return verification;
+  }
+
+  async isCodeValid(verification: VerificationToken, code: string) {
     const { verifyTOTP } = await import('@epic-web/totp');
 
     const result = verifyTOTP({
@@ -204,7 +195,7 @@ export class AuthService {
       secret: verification.secret,
       algorithm: verification.algorithm,
       period: verification.period,
-      ...OTP_WINDOW[type],
+      ...OTP_WINDOW[verification.type],
     });
 
     if (!result) throw new BadRequestException('invalid code');
@@ -236,7 +227,11 @@ export class AuthService {
     type: VerificationTypes;
     target: string;
   }) {
-    await this.isCodeValid({ code, type, target });
+    const verification = await this.getVerificationDetails({
+      target,
+      type,
+    });
+    await this.isCodeValid(verification, code);
     await this.deleteCode({ target, type });
     const user = await this.prisma.user.findUnique({
       where: { email: target },
